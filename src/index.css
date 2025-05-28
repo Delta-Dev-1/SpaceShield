@@ -1,0 +1,300 @@
+/* Apple System Font & Smoothing */
+body, .window {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Card & Window Depth */
+.p-card, .window {
+  transition: box-shadow 0.2s cubic-bezier(.4,0,.2,1), transform 0.18s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 4px 28px var(--p-shadow-card, rgba(36,41,46,0.07)), 0 1.5px 4.5px var(--p-shadow-card-soft, rgba(60,60,70,0.06));
+  border-radius: 16px;
+}
+
+/* Sidebar Section Label & Divider */
+.sidebar-section-label {
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-label-secondary);
+  letter-spacing: .08em;
+  padding: 2.2rem 2.2rem 1rem;
+  margin-bottom: 3px;
+  transition: color 0.18s;
+}
+.sidebar-section-divider {
+  border-bottom: 1px solid var(--p-card-border);
+  margin: 0 1.3rem 1.5rem 1.3rem;
+  transition: border-color 0.18s;
+}
+
+/* Sidebar Navigation Buttons */
+.p-btn-sidebar {
+  background: transparent !important;
+  border: none;
+  color: var(--p-label-primary);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  outline: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background 0.18s, color 0.18s, font-weight 0.12s;
+}
+.p-btn-sidebar.active,
+.p-btn-sidebar:focus-visible {
+  background: var(--p-btn-sidebar-active-bg);
+  color: var(--p-btn-sidebar-active-color);
+  font-weight: 600;
+}
+
+/* Card Hover Pop */
+.p-card:hover {
+  transform: translateY(-2px) scale(1.025);
+  box-shadow: 0 8px 36px 0 var(--p-shadow-card-hover, rgba(36,41,46,0.12)), 0 2px 6px var(--p-shadow-card-hover-soft, rgba(0,0,0,0.07));
+  transition: box-shadow 0.18s cubic-bezier(.5,.25,0,1), transform 0.19s cubic-bezier(.5,.25,0,1);
+}
+
+/* Segmented/Tabs Highlight & Transitions */
+.p-segmented-controls button,
+.p-tab {
+  transition: background 0.18s cubic-bezier(.4,0,.2,1), color 0.18s;
+  border-radius: 7px;
+}
+.p-segmented-controls button.active,
+.p-tab.p-is-active {
+  box-shadow: 0 1px 6px 0 var(--p-shadow-tab, rgba(45,124,246,0.09));
+}
+
+/* Modal Animations */
+.p-modal.active {
+  animation: apple-modal-fade 0.32s cubic-bezier(.3,1.1,.2,1);
+}
+@keyframes apple-modal-fade {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.p-modal-background {
+  animation: apple-blur-fade 0.34s cubic-bezier(.4,0,.2,1);
+}
+@keyframes apple-blur-fade {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(7px);
+  }
+}
+
+/* Button Touch Feedback */
+.p-btn, .p-prim-col {
+  transition: box-shadow 0.14s, background 0.13s, transform 0.17s cubic-bezier(.5,.2,.1,1);
+}
+.p-btn:active, .p-prim-col:active {
+  transform: scale(0.97);
+  box-shadow: 0 2px 8px var(--p-shadow-btn-active, rgba(36,41,46,0.07));
+  filter: brightness(0.98);
+}
+
+/* Focus Ring for Accessibility */
+:focus-visible {
+  outline-offset: 1.5px;
+  transition: outline 0.13s;
+}
+
+/* Smoother Transitions */
+.p-card, .p-panel, .p-modal, .p-segmented-controls, .p-tabs {
+  transition: all 0.18s cubic-bezier(.4,0,.2,1);
+}
+.sidebar-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  margin: 0 12px 0 0;
+  background: var(--p-label-secondary);
+  vertical-align: middle;
+}
+body.p-dark-mode .sidebar-dot {
+  background: var(--p-label-secondary);
+}
+/* Frosted glass effect for sidebar (use on your sidebar element) */
+.sidebar-frost {
+  background: var(--p-card-bg, rgba(245,246,250,0.85));
+  backdrop-filter: blur(14px) saturate(1.8);
+  -webkit-backdrop-filter: blur(14px) saturate(1.8);
+  box-shadow: 0 1px 20px 0 var(--p-shadow-card, rgba(36,41,46,0.04));
+}
+body.p-dark-mode .sidebar-frost {
+  background: var(--p-card-bg, rgba(29,32,39,0.86));
+}
+.p-btn-sidebar .sidebar-icon {
+  transition: transform 0.13s cubic-bezier(.4,0,.2,1);
+}
+.p-btn-sidebar.active .sidebar-icon {
+  transform: scale(1.17) translateX(1px);
+}
+.p-btn-sidebar {
+  margin-bottom: 2px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  letter-spacing: 0.01em;
+}
+.p-btn-sidebar:hover:not(.active) {
+  background: var(--p-btn-sidebar-hover-bg, rgba(40,125,255,0.07));
+  color: var(--p-btn-sidebar-hover-color, var(--p-btn-sidebar-active-color));
+}
+body.p-dark-mode .p-btn-sidebar:hover:not(.active) {
+  background: var(--p-btn-sidebar-hover-bg, rgba(90,135,255,0.10));
+}
+.sidebar-section-label {
+  letter-spacing: 0.12em;
+  font-size: 11.2px;
+  opacity: 0.74;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+}
+/* Leaflet Apple Style (in your index.css) */
+.leaflet-container {
+  border-radius: 16px;
+  box-shadow: 0 6px 36px 0 rgba(36,41,46,0.11), 0 2px 8px rgba(0,0,0,0.07);
+  filter: grayscale(0.06) brightness(1.1) contrast(1.15) saturate(1.19);
+  outline: none;
+}
+
+/* Glowing Apple-style blue dot */
+.apple-blue-dot {
+  width: 20px;
+  height: 20px;
+  background: #2196f3;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 10px rgba(33,150,243,0.18),
+    0 0 0 20px rgba(33,150,243,0.09),
+    0 0 16px 3px #2196f3,
+    0 0 2px #2196f3;
+  border: 3px solid #fff;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+.leaflet-container {
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 8px 36px 0 rgba(36,41,46,0.09), 0 2px 8px rgba(0,0,0,0.06);
+  filter: grayscale(0.03) brightness(1.12) contrast(1.11) saturate(1.12);
+  outline: none;
+  transition: background 0.22s;
+  background: transparent;
+}
+body.p-dark-mode .leaflet-container {
+  filter: grayscale(0.06) brightness(0.84) contrast(1.15) saturate(1.23);
+  background: #10111c;
+}
+
+.apple-blue-dot {
+  width: 20px;
+  height: 20px;
+  background: #2196f3;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 10px rgba(33,150,243,0.18),
+    0 0 0 20px rgba(33,150,243,0.09),
+    0 0 16px 3px #2196f3,
+    0 0 2px #2196f3;
+  border: 3px solid #fff;
+  position: absolute;
+  transform: translate(-50%, -50%);
+}
+
+/* Drawer blur and Apple card look */
+.track-view-editor {
+  backdrop-filter: blur(18px) saturate(1.12);
+  background: rgba(255,255,255,0.93);
+  color: #10111c;
+  transition: background 0.28s, color 0.24s;
+}
+body.p-dark-mode .track-view-editor {
+  background: rgba(31, 37, 53, 0.94);
+  color: #dbeaff;
+}
+
+/* Remove leaflet default marker icon */
+.leaflet-marker-icon, .leaflet-marker-shadow {
+  filter: none !important;
+  background: none !important;
+}
+
+/* Hide the annoying attribution if you want */
+.leaflet-control-attribution {
+  display: none;
+}
+
+.p-switch {
+  display: inline-block;
+  position: relative;
+  width: 44px;
+  height: 26px;
+  margin-right: 8px;
+}
+.p-switch input[type="checkbox"] {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.p-switch-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: #c7d2f2;
+  border-radius: 26px;
+  transition: background 0.18s;
+}
+.p-switch input:checked + .p-switch-slider {
+  background: #3b57ff;
+}
+.p-switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; width: 20px;
+  left: 3px; top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(17,38,100,0.07);
+  transition: transform 0.19s;
+}
+.p-switch input:checked + .p-switch-slider:before {
+  transform: translateX(18px);
+}
+
+/* Responsive: Mobile sidebar */
+.sidebar-toggle-btn { display: none; }
+@media (max-width: 900px) {
+  .sidebar-toggle-btn { display: block; }
+  .sidebar-frost {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 260px !important;
+    border-radius: 0 !important;
+    position: fixed !important;
+    left: -300px !important;
+    box-shadow: none !important;
+    top: 0;
+    height: 100vh;
+    z-index: 1002;
+  }
+  .sidebar-frost.open {
+    left: 0 !important;
+    box-shadow: 0 0 100vw 100vw rgba(0,0,0,0.36);
+  }
+}
