@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview",
+  "predeploy": "npm run build",
+  "deploy": "gh-pages -d dist"
+},
   "dependencies": {
     "leaflet": "^1.9.4",
     "puppertino": "github:codedgar/Puppertino#master",
@@ -33,6 +34,7 @@
     "tailwindcss-cli": "^0.1.2",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-gh-pages": "^1.0.1"
   }
 }
