@@ -27,7 +27,39 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+function LiveImageFeed({ title, imageUrl, alt, refreshInterval = 60000 }) {
+  const [src, setSrc] = React.useState(imageUrl);
 
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      // Add cache-busting query param to force reload
+      setSrc(imageUrl + "?t=" + Date.now());
+    }, refreshInterval);
+    return () => clearInterval(interval);
+  }, [imageUrl, refreshInterval]);
+
+  return (
+    <div style={{ marginTop: 24, borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+      <h3 style={{ marginBottom: 8 }}>{title}</h3>
+      <img src={src} alt={alt} style={{ width: "100%", borderRadius: 12 }} />
+    </div>
+  );
+}
+function ISSLiveVideo() {
+  return (
+    <div style={{ marginTop: 16, borderRadius: 12, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.3)" }}>
+      <iframe
+        width="100%"
+        height="360"
+        src="https://www.youtube.com/embed/H999s0P1Er0?autoplay=1&mute=1"
+        title="ISS Live Stream"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
+    </div>
+  );
+}
 function proxyFetch(url, ...args) {
   // Try direct first, then fallback to proxy
   return fetch(url, ...args)
@@ -41,234 +73,362 @@ function proxyFetch(url, ...args) {
     });
 }
 function SpaceEventsPanel({ isDark }) {
-  const [asteroids, setAsteroids] = useState([]);
-  const [kpIndex, setKpIndex] = useState([]);
-  const [solarFlares, setSolarFlares] = useState([]);
-  const [aurora, setAurora] = useState(null);
-  const [meteors, setMeteors] = useState([]);
-  const [astroEvents, setAstroEvents] = useState([]);
+  const [asteroids, setAsteroids] = React.useState([]);
+  const [kpIndex, setKpIndex] = React.useState([]);
+  const [solarFlares, setSolarFlares] = React.useState([]);
+  const [aurora, setAurora] = React.useState(null);
+  const [meteors, setMeteors] = React.useState([]);
+  const [astroEvents, setAstroEvents] = React.useState([]);
 
-  useEffect(() => {
+  // New data states
+  const [sunspots, setSunspots] = React.useState(null);
+  const [solarRegions, setSolarRegions] = React.useState(null);
+  const [f107Flux, setF107Flux] = React.useState(null);
+  const [electronFluence, setElectronFluence] = React.useState(null);
+
+  React.useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
-    // NASA NEO
-    fetch(
-      `https://api.cors.lol/?url=https://api.nasa.gov/neo/rest/v1/feed?start_date=${today}&end_date=${today}&api_key=${NASA_API_KEY}`
-    )
-      .then((r) => r.json())
-      .then((data) => setAsteroids(data?.near_earth_objects?.[today] || []))
-      .catch(() => setAsteroids([]));
-    // Kp Index
-    fetch(
-      "https://api.cors.lol/?url=https://services.swpc.noaa.gov/json/planetary_k_index_3_day.json"
-    )
-      .then((r) => r.json())
-      .then(setKpIndex)
-      .catch(() => setKpIndex([]));
-    // Solar Flares
-    fetch(
-      "https://api.cors.lol/?url=https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json"
-    )
-      .then((r) => r.json())
-      .then(setSolarFlares)
-      .catch(() => setSolarFlares([]));
-    // Aurora
-    fetch(
-      "https://api.cors.lol/?url=https://services.swpc.noaa.gov/json/ovation_aurora_latest.json"
-    )
-      .then((r) => r.json())
-      .then(setAurora)
-      .catch(() => setAurora(null));
-    // Meteors (hardcoded fallback is safe)
-    setMeteors([{ name: "Eta Aquariids", date: "May 5-6", peak: "2024-05-06" }]);
-    // Astro events
-    fetch(
-      "https://api.cors.lol/?url=https://in-the-sky.org/newscal.php?year=2024&month=5&maxdiff=31&feed=ical"
-    )
-      .then((r) => r.text())
-      .then((txt) => {
-        const events = [];
-        const lines = txt.split("\n");
-        for (let i = 0; i < lines.length; i++) {
-          if (lines[i].startsWith("SUMMARY:")) {
-            events.push({
-              summary: lines[i].replace("SUMMARY:", ""),
-              date:
-                lines[i - 2]?.replace("DTSTART;VALUE=DATE:", "") || "Unknown",
-            });
-          }
+
+    // NASA NEO - Near Earth Objects
+    proxyFetch(`https://api.nasa.gov/neo/rest/v1/feed?start_date=${today}&end_date=${today}&api_key=${NASA_API_KEY}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data && data.near_earth_objects && data.near_earth_objects[today]) {
+          setAsteroids(Array.isArray(data.near_earth_objects[today]) ? data.near_earth_objects[today] : []);
+        } else {
+          setAsteroids([]);
         }
-        setAstroEvents(events);
+      })
+      .catch(() => setAsteroids([]));
+
+    // Kp Index
+    proxyFetch("https://services.swpc.noaa.gov/json/planetary_k_index_3_day.json")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setKpIndex(data);
+        else setKpIndex([]);
+      })
+      .catch(() => setKpIndex([]));
+
+    // Solar Flares
+    proxyFetch("https://services.swpc.noaa.gov/json/goes/primary/xrays-6-hour.json")
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) setSolarFlares(data);
+        else setSolarFlares([]);
+      })
+      .catch(() => setSolarFlares([]));
+
+    // Aurora
+    proxyFetch("https://services.swpc.noaa.gov/json/ovation_aurora_latest.json")
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === "object") setAurora(data);
+        else setAurora(null);
+      })
+      .catch(() => setAurora(null));
+
+    // Meteors (hardcoded fallback)
+    setMeteors([{ name: "Eta Aquariids", date: "May 5-6", peak: "2024-05-06" }]);
+
+    // Astronomy events (iCal parsing)
+    proxyFetch("https://in-the-sky.org/newscal.php?year=2024&month=5&maxdiff=31&feed=ical")
+      .then(r => r.text())
+      .then(txt => {
+        try {
+          const events = [];
+          const lines = txt.split("\n");
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].startsWith("SUMMARY:")) {
+              events.push({
+                summary: lines[i].replace("SUMMARY:", "").trim(),
+                date: (lines[i - 2]?.replace("DTSTART;VALUE=DATE:", "") || "Unknown").trim(),
+              });
+            }
+          }
+          setAstroEvents(events);
+        } catch {
+          setAstroEvents([]);
+        }
       })
       .catch(() => setAstroEvents([]));
+
+    // NEW: Sunspot report
+    proxyFetch("https://services.swpc.noaa.gov/json/sunspot_report.json")
+      .then(r => r.json())
+      .then(data => {
+        setSunspots(data);
+      })
+      .catch(() => setSunspots(null));
+
+    // NEW: Solar regions
+    proxyFetch("https://services.swpc.noaa.gov/json/solar_regions.json")
+      .then(r => r.json())
+      .then(data => {
+        setSolarRegions(data);
+      })
+      .catch(() => setSolarRegions(null));
+
+    // NEW: F10.7 cm solar radio flux (daily)
+    proxyFetch("https://services.swpc.noaa.gov/json/f107_cm_flux.json")
+      .then(r => r.json())
+      .then(data => {
+        setF107Flux(data);
+      })
+      .catch(() => setF107Flux(null));
+
+    // NEW: Electron fluence data (space radiation environment)
+    proxyFetch("https://services.swpc.noaa.gov/json/electron_fluence_forecast.json")
+      .then(r => r.json())
+      .then(data => {
+        setElectronFluence(data);
+      })
+      .catch(() => setElectronFluence(null));
+
   }, []);
 
-  // Card style for Apple HIG polish
+  // Shared card styles
+  // Updated card style for dark mode
   const cardStyle = {
     borderRadius: 16,
-    background: isDark ? "#23253a" : "#fff",
-    boxShadow: isDark
-      ? "0 2px 16px #14141650"
-      : "0 2px 16px #cad1e533",
+    background: isDark ? "#1c1c1e" : "#fff",
+    boxShadow: isDark ? "0 2px 16px #14141650" : "0 2px 16px #cad1e533",
     padding: "1.5rem 1.5rem",
     marginBottom: "2rem",
     marginTop: 0,
-    border: isDark ? "1px solid #242743" : "1px solid #e7eaf2",
+    border: isDark ? "1px solid #2a2a2e" : "1px solid #e7eaf2",
     transition: "box-shadow 0.2s"
   };
-
   const sectionTitleStyle = {
     fontSize: 17,
     fontWeight: 700,
-    color: isDark ? "#dbe3f8" : "#2a2a36",
+    color: isDark ? "#f2f2f7" : "#2a2a36",
     marginBottom: 6,
     letterSpacing: 0.1,
     display: "flex",
     alignItems: "center",
     gap: 6
   };
-
-  const dividerStyle = {
-    border: "none",
-    borderTop: isDark ? "1px solid #363a56" : "1px solid #e7eaf2",
-    margin: "1.5rem 0"
+  const textStyle = {
+    fontSize: 15,
+    lineHeight: 1.6,
+    color: isDark ? "#d1d1d6" : "#222"
+  };
+  const loadingTextStyle = {
+    color: "#a1a1b3"
   };
 
   return (
-    <section style={{ padding: 0, maxWidth: 820, margin: "0 auto" }}>
-      <div
-        style={{
-          fontSize: 28,
-          fontWeight: 800,
-          marginBottom: 20,
-          letterSpacing: -0.5,
-          color: isDark ? "#f9faff" : "#2a2a36",
-          textShadow: isDark ? "0 2px 14px #23253a99" : undefined,
-          textAlign: "center"
-        }}
-      >
-        ✨ Live Space & Cosmic Events
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>🪐 Near-Earth Asteroids Today <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(NASA)</span></div>
-        {asteroids.length ? (
-          <ul style={{ margin: "0.6em 0 0 0.7em", padding: 0, fontSize: 15, lineHeight: 1.7 }}>
-            {asteroids.slice(0, 5).map((a) => (
-              <li key={a.id} style={{ marginBottom: 6 }}>
-                <b style={{ fontWeight: 600 }}>{a.name}</b>
-                {" – Closest: "}
-                <span style={{ color: "#2a6" }}>
-                  {(a.close_approach_data?.[0]?.miss_distance.kilometers | 0).toLocaleString()} km
-                </span>
-                <span style={{ color: "#b4b7c7", fontSize: 13, marginLeft: 12 }}>
-                  <a href={a.nasa_jpl_url} target="_blank" rel="noopener noreferrer" style={{ color: "#8aa", textDecoration: "underline" }}>
-                    NASA JPL
-                  </a>
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>No close approaches listed today.</span>
-        )}
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>🌐 Kp Index <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(Geomagnetic Storm, NOAA)</span></div>
-        {kpIndex.length ? (
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 15 }}>
-            {kpIndex.slice(-8).map((k, i) => (
-              <span
-                key={i}
-                style={{
-                  color: k.kp_index >= 5 ? "#e44" : "#197",
-                  fontWeight: 700,
-                  background: k.kp_index >= 5 ? "#ffebee" : "#e6f7f1",
-                  borderRadius: 7,
-                  padding: "0.2em 0.7em",
-                  fontSize: 15,
-                  boxShadow: isDark ? "0 1px 5px #23253a33" : "0 1px 5px #cad1e533"
-                }}
-              >
-                Kp {k.kp_index} <span style={{ fontWeight: 400, color: "#888", marginLeft: 4 }}>({k.time_tag.slice(11, 16)})</span>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>Not available.</span>
-        )}
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>☀️ Solar Flares <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(GOES X-ray, 6h)</span></div>
-        {solarFlares.length ? (
-          <div style={{ fontSize: 14, whiteSpace: "nowrap", overflowX: "auto", maxWidth: "100%" }}>
-            {solarFlares.slice(-12).map((f, i) => (
-              <span key={i} style={{ marginRight: 18 }}>
-                <span style={{ color: "#888" }}>{f.time_tag?.slice(11, 19)}Z:</span>{" "}
-                <b style={{ color: "#fa0", fontFamily: "SFMono-Regular,monospace" }}>
-                  {(+f.flux).toExponential(2)}
-                </b>
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>Not available.</span>
-        )}
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>🌌 Aurora Activity <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(Ovation, NOAA)</span></div>
-        {aurora ? (
-          <div>
-            <span>
-              Power North:{" "}
-              <b style={{ color: "#4ed" }}>{aurora.Power_N.toFixed(1)} GW</b>, Power South:{" "}
-              <b style={{ color: "#4ed" }}>{aurora.Power_S.toFixed(1)} GW</b>
-            </span>
-            <div style={{ marginTop: 12, textAlign: "center" }}>
-              <img
-                src="https://services.swpc.noaa.gov/images/aurora-forecast-northern-hemisphere.png"
-                width={340}
-                alt="Aurora forecast"
-                style={{ borderRadius: 10, boxShadow: "0 2px 10px #0002" }}
-              />
-            </div>
-          </div>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>Not available.</span>
-        )}
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>☄️ Meteor Showers <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(IMO)</span></div>
-        {meteors.length ? (
-          <ul style={{ margin: 0, padding: 0, fontSize: 15 }}>
-            {meteors.map((m, i) => (
-              <li key={i}>
-                <b>{m.name}</b> — Peak: <span style={{ color: "#2a6" }}>{m.peak}</span>{" "}
-                <span style={{ color: "#888", fontSize: 13 }}>({m.date})</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>No upcoming major showers listed.</span>
-        )}
-      </div>
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>📅 Astronomy Events <span style={{fontWeight:400, fontSize:13, color:"#aa9"}}>(In-The-Sky.org)</span></div>
-        {astroEvents.length ? (
-          <ul style={{ margin: 0, padding: 0, fontSize: 15 }}>
-            {astroEvents.slice(0, 6).map((e, i) => (
-              <li key={i}>
-                <span style={{ color: "#888" }}>{e.date}:</span>{" "}
-                <span style={{ fontWeight: 600 }}>{e.summary}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <span style={{ color: "#a1a1b3" }}>No events found.</span>
-        )}
-      </div>
-    </section>
-  );
-}
+  <section style={{ padding: 0, maxWidth: 820, margin: "0 auto" }}>
+    <div
+      style={{
+        fontSize: 28,
+        fontWeight: 800,
+        marginBottom: 20,
+        letterSpacing: -0.5,
+        color: isDark ? "#f9faff" : "#2a2a36",
+        textShadow: isDark ? "0 2px 14px #23253a99" : undefined,
+        textAlign: "center"
+      }}
+    >
+      ✨ Live Space & Cosmic Events
+    </div>
 
+    {/* Sunspot Report */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        🌞 Sunspot Report <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(NOAA)</span>
+      </div>
+      {sunspots ? (
+        <div style={textStyle}>
+          <p><b>Active Regions:</b> {sunspots.active_regions || "N/A"}</p>
+          <p><b>Sunspot Number:</b> {sunspots.sunspot_number || "N/A"}</p>
+          <p><b>Solar Flux:</b> {sunspots.solar_flux || "N/A"} sfu</p>
+          <p><b>Report Date:</b> {sunspots.report_date || "N/A"}</p>
+        </div>
+      ) : (
+        <span style={loadingTextStyle}>Loading sunspot data...</span>
+      )}
+    </div>
+
+    {/* Solar Radio Flux */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        📻 Solar Radio Flux (F10.7 cm) <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(NOAA)</span>
+      </div>
+      {f107Flux ? (
+        <div style={{ ...textStyle, lineHeight: 1.4 }}>
+          Latest value: <b>{f107Flux.latest_value || "N/A"}</b> sfu<br />
+          Average (81-day): <b>{f107Flux.average_81_day || "N/A"}</b> sfu<br />
+          Date: {f107Flux.date || "N/A"}
+        </div>
+      ) : (
+        <span style={loadingTextStyle}>Loading solar flux data...</span>
+      )}
+    </div>
+
+    {/* Electron Fluence Forecast */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        ⚡ Electron Fluence Forecast <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(NOAA)</span>
+      </div>
+      {electronFluence ? (
+        <div style={{ ...textStyle, lineHeight: 1.4 }}>
+          <p><b>Fluence (24h):</b> {electronFluence.fluence_24h || "N/A"} e/cm²</p>
+          <p><b>Fluence (72h):</b> {electronFluence.fluence_72h || "N/A"} e/cm²</p>
+          <p><b>Last Updated:</b> {electronFluence.update_time || "N/A"}</p>
+        </div>
+      ) : (
+        <span style={loadingTextStyle}>Loading electron fluence data...</span>
+      )}
+    </div>
+
+    {/* Near-Earth Asteroids */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        🪐 Near-Earth Asteroids Today <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(NASA)</span>
+      </div>
+      {asteroids.length > 0 ? (
+        <ul style={{ margin: "0.6em 0 0 0.7em", padding: 0, fontSize: 15, lineHeight: 1.7 }}>
+          {asteroids.slice(0, 5).map((a) => (
+            <li key={a.id || a.neo_reference_id || a.name}>
+              <b style={{ fontWeight: 600 }}>{a.name || "Unknown"}</b> – Closest:{" "}
+              <span style={{ color: "#2a6" }}>
+                {a.close_approach_data?.[0]?.miss_distance?.kilometers
+                  ? Number(a.close_approach_data[0].miss_distance.kilometers).toLocaleString()
+                  : "N/A"}{" "}
+                km
+              </span>{" "}
+              {a.nasa_jpl_url ? (
+                <a href={a.nasa_jpl_url} target="_blank" rel="noopener noreferrer" style={{ color: "#8aa", textDecoration: "underline" }}>
+                  NASA JPL
+                </a>
+              ) : (
+                "NASA JPL"
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>No close approaches listed today.</span>
+      )}
+    </div>
+
+    {/* Kp Index */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        🌐 Kp Index <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(Geomagnetic Storm, NOAA)</span>
+      </div>
+      {kpIndex.length > 0 ? (
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 15 }}>
+          {kpIndex.slice(-8).map((k, i) => (
+            <span
+              key={i}
+              style={{
+                color: k.kp_index >= 5 ? "#e44" : "#197",
+                fontWeight: 700,
+                background: k.kp_index >= 5 ? "#ffebee" : "#e6f7f1",
+                borderRadius: 7,
+                padding: "0.2em 0.7em",
+                boxShadow: isDark ? "0 1px 5px #23253a33" : "0 1px 5px #cad1e533"
+              }}
+            >
+              Kp {k.kp_index} <span style={{ fontWeight: 400, color: "#888", marginLeft: 4 }}>{k.time_tag?.slice(11, 16)}</span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>Not available.</span>
+      )}
+    </div>
+
+    {/* Solar Flares */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        ☀️ Solar Flares <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(GOES X-ray, 6h)</span>
+      </div>
+      {solarFlares.length > 0 ? (
+        <div style={{ fontSize: 14, whiteSpace: "nowrap", overflowX: "auto", maxWidth: "100%" }}>
+          {solarFlares.slice(-12).map((f, i) => (
+            <span key={i} style={{ marginRight: 18 }}>
+              <span style={{ color: "#888" }}>{f.time_tag?.slice(11, 19)}Z:</span>{" "}
+              <b style={{ color: "#fa0", fontFamily: "SFMono-Regular,monospace" }}>
+                {Number(f.flux).toExponential(2)}
+              </b>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>Not available.</span>
+      )}
+    </div>
+
+    {/* Aurora Activity */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        🌌 Aurora Activity <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(Ovation, NOAA)</span>
+      </div>
+      {aurora ? (
+        <div>
+          <span>
+            Power North:{" "}
+            <b style={{ color: "#4ed" }}>{typeof aurora.Power_N === "number" ? aurora.Power_N.toFixed(1) : "N/A"} GW</b>, Power South:{" "}
+            <b style={{ color: "#4ed" }}>{typeof aurora.Power_S === "number" ? aurora.Power_S.toFixed(1) : "N/A"} GW</b>
+          </span>
+          <div style={{ marginTop: 12, textAlign: "center" }}>
+            <img
+              src="https://services.swpc.noaa.gov/images/aurora-forecast-northern-hemisphere.png"
+              width={340}
+              alt="Aurora forecast"
+              style={{ borderRadius: 10, boxShadow: "0 2px 10px #0002" }}
+            />
+          </div>
+        </div>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>Not available.</span>
+      )}
+    </div>
+
+    {/* Meteor Showers */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        ☄️ Meteor Showers <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(IMO)</span>
+      </div>
+      {meteors.length > 0 ? (
+        <ul style={{ margin: 0, padding: 0, fontSize: 15 }}>
+          {meteors.map((m, i) => (
+            <li key={i}>
+              <b>{m.name}</b> — Peak: <span style={{ color: "#2a6" }}>{m.peak}</span>{" "}
+              <span style={{ color: "#888", fontSize: 13 }}>({m.date})</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>No upcoming major showers listed.</span>
+      )}
+    </div>
+
+    {/* Astronomy Events */}
+    <div style={cardStyle}>
+      <div style={sectionTitleStyle}>
+        📅 Astronomy Events <span style={{ fontWeight: 400, fontSize: 13, color: "#aa9" }}>(In-The-Sky.org)</span>
+      </div>
+      {astroEvents.length > 0 ? (
+        <ul style={{ margin: 0, padding: 0, fontSize: 15 }}>
+          {astroEvents.slice(0, 6).map((e, i) => (
+            <li key={i}>
+              <span style={{ color: "#888" }}>{e.date}:</span>{" "}
+              <span style={{ fontWeight: 600 }}>{e.summary}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <span style={{ color: "#a1a1b3" }}>No events found.</span>
+      )}
+    </div>
+  </section>
+);
+}
 // Featured satellites
 const FEATURED_SATELLITES = [
   { name: "International Space Station", noradId: 25544, type: "ISS", description: "Habitable artificial satellite in low Earth orbit.", icon: "🧭" },
@@ -668,7 +828,10 @@ function App() {
             onMouseLeave={(e) => {
               e.target.style.background = isDark ? "rgba(120, 120, 128, 0.16)" : "rgba(120, 120, 128, 0.08)";
             }}
-          >
+            onAnimationEnd={(e) => e.currentTarget.classList.remove("animate-rubberBand")}
+  onClickCapture={(e) => e.currentTarget.classList.add("animate-rubberBand")}
+>
+          
             ✕
           </button>
         </div>
@@ -1432,6 +1595,29 @@ function App() {
             <div style={{ fontSize: 16, fontWeight: 600, color: isDark ? "#b6d0ff" : "#2a4b9c" }}>N/A</div>
             <div style={{ fontSize: 13, color: "#a4a7bb", fontWeight: 500, marginTop: 10, marginBottom: 2 }}>Launch Info</div>
             <div style={{ fontSize: 16, fontWeight: 600, color: isDark ? "#b6d0ff" : "#2a4b9c" }}>Date: N/A · Vehicle: N/A</div>
+            {selectedSat.OBJECT_ID === "25544" && (
+  <>
+    <h3 style={{ marginTop: 24, marginBottom: 8 }}>🎥 Live ISS Video Feed</h3>
+    <ISSLiveVideo />
+  </>
+)}
+{selectedSat.OBJECT_ID === "20580" && (
+  <LiveImageFeed 
+    title="📷 Latest Hubble Image"
+    imageUrl="https://hubblesite.org/uploads/image_file/file/4406/STSCI-H-p2006a-f-1700x1700.png" 
+    alt="Latest Hubble Space Telescope Image"
+    refreshInterval={300000} // refresh every 5 min
+  />
+)}
+
+{selectedSat.OBJECT_ID === "41866" && (
+  <LiveImageFeed 
+    title="🌦️ GOES-16 Weather Image"
+    imageUrl="https://cdn.star.nesdis.noaa.gov/GOES16/ABI/FD/GEOCOLOR/latest.jpg"
+    alt="Latest GOES-16 Weather Satellite Image"
+    refreshInterval={60000} // refresh every 1 min
+  />
+)}
           </>
         ) : (
           <>
@@ -1458,6 +1644,7 @@ function App() {
             <div style={{ fontSize: 12, color: isDark ? "#858798" : "#a2a2b0", marginTop: 5 }}>
               Select a satellite from the left or click a marker for details.
             </div>
+            
           </>
         )}
       </div>
@@ -1529,7 +1716,7 @@ function App() {
   padding: "6px",
 }}>
             <button
-              className={`p-tab${tab === 0 ? " p-is-active" : ""}`}
+              className={`p-tab${tab === 0 ? " p-is-active" : ""} animate-slideDown`}
               style={{
                 background: tab === 0
                   ? isDark ? "#313134" : "#eef0fb"
@@ -1709,5 +1896,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
